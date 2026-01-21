@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MindHealer — 1‑Hour Anonymous Chat</title>
+  <style>
+    :root {
+      --bg: #f6f4ff;
+      --card: #ffffff;
+      --primary: #8b7cf6;
+      --secondary: #b9b3ff;
+      --text: #2f2f3a;
+      --muted: #6b6b7a;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background: linear-gradient(180deg, var(--bg), #ffffff);
+      color: var(--text);
+    }
+    header { padding: 32px 16px; text-align: center; }
+    header h1 { margin: 0 0 6px; font-size: 2rem; }
+    header p { margin: 0; color: var(--muted); }
+    .container { max-width: 900px; margin: 0 auto; padding: 16px; display: grid; gap: 16px; }
+    .card { background: var(--card); border-radius: 16px; padding: 16px; box-shadow: 0 10px 30px rgba(139,124,246,0.12); }
+    .pill { display:inline-block; padding:6px 12px; border-radius:999px; background:#f0efff; color:var(--primary); font-size:.85rem; }
+    .chat { display:grid; gap:12px; }
+    .messages { height: 320px; overflow-y: auto; border: 1px solid #e6e4ff; border-radius: 12px; padding: 10px; background:#faf9ff; }
+    .msg { margin-bottom: 8px; }
+    .me { color: #4b43d0; }
+    .them { color: #2f2f3a; }
+    form { display:flex; gap:8px; }
+    input[type=text] { flex:1; border-radius:12px; border:1px solid #e6e4ff; padding:10px; font-size:1rem; }
+    button { background: var(--primary); color:#fff; border:none; border-radius:12px; padding:10px 16px; cursor:pointer; }
+    .top { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+    .timer { font-weight:600; color:#7a6bf0; }
+    .note { font-size:.85rem; color:var(--muted); background:#fff7e6; border-radius:12px; padding:12px; }
+    footer { text-align:center; padding:24px 16px 40px; color:var(--muted); font-size:.9rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>MindHealer</h1>
+    <p>Anonymous, calm listening — sessions last 1 hour.</p>
+  </header>
+
+  <main class="container">
+    <section class="card">
+      <div class="top">
+        <span class="pill">Live chat</span>
+        <div class="timer" id="timer">60:00</div>
+      </div>
+      <div class="chat">
+        <div class="messages" id="messages"></div>
+        <form id="chatForm">
+          <input type="text" id="messageInput" placeholder="Type gently…" autocomplete="off" />
+          <button type="submit">Send</button>
+        </form>
+      </div>
+    </section>
+
+    <section class="card note">
+      <strong>Important note</strong><br />
+      MindHealer is a peer‑support listening space, not professional therapy or medical care. If you feel unsafe or need urgent help, please reach out to local emergency services or a trusted adult.
+    </section>
+  </main>
+
+  <footer>
+    Made with care by Cherry · MindHealer © 2026
+  </footer>
+
+  <!-- Firebase (free real‑time database) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script>
+    // 1) Create a FREE Firebase project, then replace these keys
+    const firebaseConfig = {
+      apiKey: "REPLACE_ME",
+      authDomain: "REPLACE_ME",
+      databaseURL: "REPLACE_ME",
+      projectId: "REPLACE_ME",
+      storageBucket: "REPLACE_ME",
+      messagingSenderId: "REPLACE_ME",
+      appId: "REPLACE_ME"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // Anonymous room (auto)
+    const roomId = 'room-' + Math.random().toString(36).slice(2);
+    const messagesRef = db.ref('rooms/' + roomId + '/messages');
+
+    const messagesDiv = document.getElementById('messages');
+    const form = document.getElementById('chatForm');
+    const input = document.getElementById('messageInput');
+
+    messagesRef.limitToLast(100).on('child_added', snap => {
+      const m = snap.val();
+      const div = document.createElement('div');
+      div.className = 'msg ' + (m.me ? 'me' : 'them');
+      div.textContent = m.text;
+      messagesDiv.appendChild(div);
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    });
+
+    form.addEventListener('submit', e => {
+      e.preventDefault();
+      if (!input.value.trim()) return;
+      messagesRef.push({ text: input.value.trim(), me: true, ts: Date.now() });
+      input.value = '';
+    });
+
+    // 2) 1‑hour timer
+    let remaining = 60 * 60; // seconds
+    const timerEl = document.getElementById('timer');
+    const tick = setInterval(() => {
+      remaining--;
+      const m = String(Math.floor(remaining / 60)).padStart(2,'0');
+      const s = String(remaining % 60).padStart(2,'0');
+      timerEl.textContent = m + ':' + s;
+      if (remaining <= 0) {
+        clearInterval(tick);
+        input.disabled = true;
+        timerEl.textContent = 'Session ended';
+      }
+    }, 1000);
+  </script>
+</body>
+</html>
